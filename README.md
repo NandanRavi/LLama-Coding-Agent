@@ -10,7 +10,9 @@ pip install llamacode
 
 ## Setup
 
-Set your NVIDIA API key via one of these methods:
+1. Get a free NVIDIA API key from [build.nvidia.com/meta/llama-3_3-70b-instruct](https://build.nvidia.com/meta/llama-3_3-70b-instruct) (click "Get API Key")
+
+2. Set your NVIDIA API key via one of these methods:
 
 **Option 1 — Environment variable:**
 
