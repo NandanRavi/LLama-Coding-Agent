@@ -10,4 +10,4 @@ version = "1.0.0"
 llamacode = "coding_agent:main"
 
 [tool.setuptools]
-py-modules = ["coding_agent"]
+py-modules = ["coding_agent", "key_generator", "api_server"]

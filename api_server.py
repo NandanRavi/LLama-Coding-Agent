@@ -14,8 +14,8 @@ load_dotenv(os.path.expanduser("~/.coding_agent/.env"))
 NVIDIA_API_KEY = os.getenv("NVIDIA_API_KEY")
 if not NVIDIA_API_KEY:
     print("Error: NVIDIA_API_KEY not found.")
-    print("Create a .env file with: NVIDIA_API_KEY=nvapi-xxxxx")
-    print("Or set it as an environment variable.")
+    print("  Run `llamacode --generate-key` to generate one via browser.")
+    print("  Or create a .env file with: NVIDIA_API_KEY=nvapi-xxxxx")
     exit(1)
 
 AVAILABLE_MODELS = {
@@ -94,6 +94,32 @@ def chat_completions(req: ChatCompletionRequest):
         raise HTTPException(status_code=500, detail=str(e))
 
 def run_cli():
+    global NVIDIA_API_KEY, client
+
+    if not NVIDIA_API_KEY:
+        print("NVIDIA_API_KEY not found.")
+        print("Would you like to generate one now via browser? [Y/n]: ", end="")
+        try:
+            resp = input().strip().lower()
+        except (EOFError, KeyboardInterrupt):
+            resp = "n"
+        if not resp or resp[0] != "n":
+            from key_generator import generate_api_key
+            key = generate_api_key()
+            if key:
+                NVIDIA_API_KEY = key
+                os.environ["NVIDIA_API_KEY"] = key
+                client = OpenAI(
+                    base_url="https://integrate.api.nvidia.com/v1",
+                    api_key=NVIDIA_API_KEY
+                )
+            else:
+                print("Could not obtain API key.")
+                return
+        else:
+            print("Please set NVIDIA_API_KEY in .env or as environment variable.")
+            return
+
     print("=" * 60)
     print("  Local Coding Agent CLI")
     print("  Powered by NVIDIA Llama 3.3 70B")
@@ -167,4 +193,24 @@ def run_cli():
             print(f"Error: {e}")
 
 if __name__ == "__main__":
-    run_cli()
+    import argparse
+    parser = argparse.ArgumentParser(description="Coding Agent API Server")
+    parser.add_argument("--generate-key", action="store_true",
+                        help="Generate NVIDIA API key via browser")
+    parser.add_argument("--server", action="store_true",
+                        help="Run as API server (uvicorn)")
+    args = parser.parse_args()
+
+    if args.generate_key:
+        from key_generator import generate_api_key
+        key = generate_api_key()
+        if key:
+            print("API key generated successfully.")
+        else:
+            print("Failed to generate API key.")
+            exit(1)
+    elif args.server:
+        import uvicorn
+        uvicorn.run(app, host="0.0.0.0", port=8000)
+    else:
+        run_cli()

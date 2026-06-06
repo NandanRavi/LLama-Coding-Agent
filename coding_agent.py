@@ -8,22 +8,12 @@ from pathlib import Path
 from typing import Optional
 
 from dotenv import load_dotenv
-from openai import OpenAI
 
 load_dotenv()
 load_dotenv(os.path.expanduser("~/.coding_agent/.env"))
 
 NVIDIA_API_KEY = os.getenv("NVIDIA_API_KEY")
-if not NVIDIA_API_KEY:
-    print("Error: NVIDIA_API_KEY not found.")
-    print("Create a .env file with: NVIDIA_API_KEY=nvapi-xxxxx")
-    print("Or set it as an environment variable.")
-    sys.exit(1)
-
-CLIENT = OpenAI(
-    base_url="https://integrate.api.nvidia.com/v1",
-    api_key=NVIDIA_API_KEY
-)
+CLIENT = None
 
 AVAILABLE_MODELS = {
     "llama-3.3": "meta/llama-3.3-70b-instruct",
@@ -448,6 +438,55 @@ class CodingAgent:
 
 
 def main():
+    import argparse
+    parser = argparse.ArgumentParser(description="Coding Agent CLI")
+    parser.add_argument("--generate-key", action="store_true",
+                        help="Generate NVIDIA API key via browser")
+    args = parser.parse_args()
+
+    global NVIDIA_API_KEY, CLIENT
+
+    if args.generate_key:
+        from key_generator import generate_api_key
+        key = generate_api_key()
+        if key:
+            NVIDIA_API_KEY = key
+            os.environ["NVIDIA_API_KEY"] = key
+        else:
+            print("Failed to generate API key.")
+            sys.exit(1)
+    elif not NVIDIA_API_KEY:
+        print("NVIDIA_API_KEY not found.")
+        print("Would you like to generate one now via browser? [Y/n]: ", end="")
+        try:
+            resp = input().strip().lower()
+        except (EOFError, KeyboardInterrupt):
+            resp = "n"
+        if not resp or resp[0] != "n":
+            from key_generator import generate_api_key
+            key = generate_api_key()
+            if key:
+                NVIDIA_API_KEY = key
+                os.environ["NVIDIA_API_KEY"] = key
+            else:
+                print("Could not obtain API key. Please set it manually.")
+                sys.exit(1)
+        else:
+            print("Please set NVIDIA_API_KEY in .env or as environment variable.")
+            sys.exit(1)
+
+    if not NVIDIA_API_KEY:
+        print("Error: NVIDIA_API_KEY not found.")
+        print("Create a .env file with: NVIDIA_API_KEY=nvapi-xxxxx")
+        print("Or set it as an environment variable.")
+        sys.exit(1)
+
+    from openai import OpenAI
+    CLIENT = OpenAI(
+        base_url="https://integrate.api.nvidia.com/v1",
+        api_key=NVIDIA_API_KEY
+    )
+
     agent = CodingAgent()
     agent.start_cli()
 
