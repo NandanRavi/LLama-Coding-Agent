@@ -10,11 +10,16 @@ pip install llamacode
 
 ## Setup
 
-1. Get a free NVIDIA API key from [build.nvidia.com/meta/llama-3_3-70b-instruct](https://build.nvidia.com/meta/llama-3_3-70b-instruct) (click "Get API Key")
+Get an NVIDIA API key via one of these methods:
 
-2. Set your NVIDIA API key via one of these methods:
+**Option 1 — Automatic browser generation (recommended, requires Playwright):**
 
-**Option 1 — Environment variable:**
+```bash
+llamacode --generate-key
+```
+Launches a browser to [build.nvidia.com](https://build.nvidia.com/meta/llama-3_3-70b-instruct) — you log in manually and the key is detected and saved automatically. Playwright will be installed on first use if missing.
+
+**Option 2 — Environment variable:**
 
 ```bash
 set NVIDIA_API_KEY=nvapi-xxxxx        # cmd
@@ -22,14 +27,14 @@ $env:NVIDIA_API_KEY="nvapi-xxxxx"     # PowerShell
 export NVIDIA_API_KEY=nvapi-xxxxx     # bash
 ```
 
-**Option 2 — .env file in home directory:**
+**Option 3 — .env file in home directory:**
 
 ```bash
 mkdir ~\.coding_agent
 echo NVIDIA_API_KEY=nvapi-xxxxx > ~\.coding_agent\.env
 ```
 
-**Option 3 — .env file in current directory:**
+**Option 4 — .env file in current directory:**
 
 ```bash
 echo NVIDIA_API_KEY=nvapi-xxxxx > .env
@@ -38,10 +43,13 @@ echo NVIDIA_API_KEY=nvapi-xxxxx > .env
 ## Usage
 
 ```bash
-llamacode
+llamacode                       # interactive CLI (prompts for key if missing)
+llamacode --generate-key        # generate API key via browser
 ```
 
 Then type your coding questions or tasks directly in the terminal.
+
+If no API key is found, llamacode will prompt you to generate one automatically on first run.
 
 ### Commands
 
