@@ -1,0 +1,13 @@
+[build-system]
+requires = ["setuptools>=64", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "llamacode"
+version = "1.0.0"
+
+[project.scripts]
+llamacode = "coding_agent:main"
+
+[tool.setuptools]
+py-modules = ["coding_agent"]
