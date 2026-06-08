@@ -11,3 +11,4 @@ llamacode = "coding_agent:main"
 
 [tool.setuptools]
 py-modules = ["coding_agent", "key_generator", "api_server"]
+packages = ["agents", "core"]

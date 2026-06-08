@@ -1,6 +1,8 @@
 # LLaMACode
 
-A coding agent powered by NVIDIA Llama 3.3 (70B) that runs in your terminal. It can read, write, and edit files, run shell commands, search code, and more.
+A coding agent powered by NVIDIA Llama models that runs in your terminal. It can read, write, and edit files, run shell commands, search code, and more.
+
+Choose from three model tiers — **1B** (fast & cheap), **3B** (balanced, default), or **70B** (most powerful, needs your own API key).
 
 ## Installation
 
@@ -8,16 +10,26 @@ A coding agent powered by NVIDIA Llama 3.3 (70B) that runs in your terminal. It 
 pip install llamacode
 ```
 
-## Setup
+## API Keys
 
-Get an NVIDIA API key via one of these methods:
+LLaMACode uses NVIDIA's hosted Llama models. Different models need different API keys:
 
-**Option 1 — Automatic browser generation (recommended, requires Playwright):**
+### 1B & 3B Models (pre-configured)
+
+The **Llama 3.2 1B** and **Llama 3.2 3B** models come with pre-configured API keys bundled in the project.  
+They work out of the box — no additional setup required.
+
+### 70B Model (bring your own key)
+
+The **Llama 3.3 70B** model requires your **own NVIDIA API key**. Get one via:
+
+**Option 1 — Automatic browser generation (recommended):**
 
 ```bash
 llamacode --generate-key
 ```
-Launches a browser to [build.nvidia.com](https://build.nvidia.com/meta/llama-3_3-70b-instruct) — you log in manually and the key is detected and saved automatically. Playwright will be installed on first use if missing.
+
+Launches a browser to [build.nvidia.com](https://build.nvidia.com/meta/llama-3_3-70b-instruct) — you log in and the key is detected and saved automatically. Playwright will be installed on first use if missing.
 
 **Option 2 — Environment variable:**
 
@@ -43,13 +55,32 @@ echo NVIDIA_API_KEY=nvapi-xxxxx > .env
 ## Usage
 
 ```bash
-llamacode                       # interactive CLI (prompts for key if missing)
-llamacode --generate-key        # generate API key via browser
+llamacode                        # interactive CLI with model selection
+llamacode --model llama-3.2-3b   # start with a specific model
+llamacode --model llama-3.3-70b  # use 70B model (requires your own API key)
+llamacode --generate-key         # generate API key via browser
 ```
 
-Then type your coding questions or tasks directly in the terminal.
+On first run, you'll see an interactive model picker:
 
-If no API key is found, llamacode will prompt you to generate one automatically on first run.
+```
+  ══════════════════════════════════════════════════════════════
+     LLaMACode - Choose a Model
+  ══════════════════════════════════════════════════════════════
+
+  [1] Llama 3.2 1B        Fastest, lightweight tasks               Key: ✓
+  [2] Llama 3.2 3B        Balanced, default model                  Key: ✓
+  [3] Llama 3.3 70B       Most powerful (needs your own key)       Key: ✗
+
+  Select [1-3] (default: 2):
+```
+
+While processing, you'll see an animated spinner showing which phase is active:
+
+```
+  / Planning approach (llama-3.2-3b)
+  \ Implementing changes (llama-3.2-3b)
+```
 
 ### Commands
 
@@ -58,9 +89,9 @@ If no API key is found, llamacode will prompt you to generate one automatically 
 | `/exit`           | Exit the CLI                           |
 | `/new`            | Start a new session                    |
 | `/clear`          | Clear conversation history             |
-| `/status`         | Show session info                      |
+| `/status`         | Show session info & API key status     |
 | `/model`          | Show current model                     |
-| `/model <name>`   | Switch model (`llama-3.3`)             |
+| `/model <name>`   | Switch model on the fly                |
 | `/workdir`        | Show working directory                 |
 | `/workdir <path>` | Change working directory               |
 | `/save`           | Save conversation to file              |
@@ -69,6 +100,24 @@ If no API key is found, llamacode will prompt you to generate one automatically 
 | `/compact`        | Summarize conversation to save context |
 | `/help`           | Show help                              |
 
-## Models
+### Switching Models at Runtime
 
-- **llama-3.3** (default) — `meta/llama-3.3-70b-instruct`
+Use `/model` to switch models during a session:
+
+```
+/model llama-3.2-1b    → Llama 3.2 1B (fastest)
+/model llama-3.2-3b    → Llama 3.2 3B (balanced, default)
+/model llama-3.3-70b   → Llama 3.3 70B (most powerful)
+```
+
+## Available Models
+
+| Alias              | Model ID                         | Size | Key Required         |
+| ------------------ | -------------------------------- | ---- | -------------------- |
+| `llama-3.2-1b`     | `meta/llama-3.2-1b-instruct`    | 1B   | Pre-configured (env) |
+| `llama-3.2-3b`     | `meta/llama-3.2-3b-instruct`    | 3B   | Pre-configured (env) |
+| `llama-3.3-70b`    | `meta/llama-3.3-70b-instruct`   | 70B  | Your own key         |
+
+- **1B models** are used internally for planning and search (fast, cheap).
+- **3B models** handle coding, reviewing, and summarizing (balanced, default).
+- **70B model** is the most powerful — use it for complex tasks. Requires your own NVIDIA API key.

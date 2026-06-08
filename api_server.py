@@ -3,25 +3,17 @@ import os
 from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from openai import OpenAI
 from pydantic import BaseModel
 from typing import Optional, List
 import uvicorn
+from core.model_manager import AGENT_MODELS, MODEL_ALIASES, ModelManager
 
 load_dotenv()
 load_dotenv(os.path.expanduser("~/.coding_agent/.env"))
 
-NVIDIA_API_KEY = os.getenv("NVIDIA_API_KEY")
-if not NVIDIA_API_KEY:
-    print("Error: NVIDIA_API_KEY not found.")
-    print("  Run `llamacode --generate-key` to generate one via browser.")
-    print("  Or create a .env file with: NVIDIA_API_KEY=nvapi-xxxxx")
-    exit(1)
-
-AVAILABLE_MODELS = {
-    "llama-3.3": "meta/llama-3.3-70b-instruct"
-}
-MODEL = AVAILABLE_MODELS["llama-3.3"]
+MODEL_MANAGER = ModelManager()
+AVAILABLE_MODELS = MODEL_ALIASES
+MODEL = AVAILABLE_MODELS["llama-3.2"]
 
 app = FastAPI(title="Local Coding Agent API", version="1.0.0")
 
@@ -32,17 +24,13 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-client = OpenAI(
-    base_url="https://integrate.api.nvidia.com/v1",
-    api_key=NVIDIA_API_KEY
-)
-
 class ChatMessage(BaseModel):
     role: str
     content: str
 
 class ChatCompletionRequest(BaseModel):
-    model: str = "meta/llama-3.3-70b-instruct"
+    model: str = "meta/llama-3.2-3b-instruct"
+    agent: Optional[str] = None
     messages: List[ChatMessage]
     temperature: Optional[float] = 0.2
     top_p: Optional[float] = 0.7
@@ -59,7 +47,10 @@ def list_models():
         "object": "list",
         "data": [
             {"id": v, "object": "model"} for v in AVAILABLE_MODELS.values()
-        ]
+        ] + [
+            {"id": v, "object": "model", "owned_by": agent}
+            for agent, v in AGENT_MODELS.items()
+        ],
     }
 
 @app.post("/v1/chat/completions")
@@ -70,8 +61,9 @@ def chat_completions(req: ChatCompletionRequest):
     messages = [{"role": m.role, "content": m.content} for m in req.messages]
 
     try:
-        completion = client.chat.completions.create(
-            model=req.model,
+        completion = MODEL_MANAGER.create_chat_completion(
+            model_or_alias=req.model,
+            agent=req.agent,
             messages=messages,
             temperature=req.temperature,
             top_p=req.top_p,
@@ -88,17 +80,17 @@ def chat_completions(req: ChatCompletionRequest):
                     "content": completion.choices[0].message.content
                 }
             }],
-            "model": req.model
+            "model": MODEL_MANAGER.resolve_model(req.model, req.agent)
         }
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
 def run_cli():
-    global NVIDIA_API_KEY, client
+    global MODEL_MANAGER
 
-    if not NVIDIA_API_KEY:
-        print("NVIDIA_API_KEY not found.")
-        print("Would you like to generate one now via browser? [Y/n]: ", end="")
+    if not MODEL_MANAGER.has_any_key():
+        print("No NVIDIA API keys found.")
+        print("Would you like to generate a 70B user key now via browser? [Y/n]: ", end="")
         try:
             resp = input().strip().lower()
         except (EOFError, KeyboardInterrupt):
@@ -107,22 +99,18 @@ def run_cli():
             from key_generator import generate_api_key
             key = generate_api_key()
             if key:
-                NVIDIA_API_KEY = key
                 os.environ["NVIDIA_API_KEY"] = key
-                client = OpenAI(
-                    base_url="https://integrate.api.nvidia.com/v1",
-                    api_key=NVIDIA_API_KEY
-                )
+                MODEL_MANAGER = ModelManager()
             else:
                 print("Could not obtain API key.")
                 return
         else:
-            print("Please set NVIDIA_API_KEY in .env or as environment variable.")
+            print("Please set NVIDIA API keys in .env or as environment variables.")
             return
 
     print("=" * 60)
     print("  Local Coding Agent CLI")
-    print("  Powered by NVIDIA Llama 3.3 70B")
+    print("  Powered by NVIDIA Llama 3.2/3.3")
     print("=" * 60)
     print("  Commands: /exit, /clear, /help")
     print()
@@ -178,8 +166,8 @@ def run_cli():
 
         try:
             print("\033[1;34mAgent:\033[0m ", end="", flush=True)
-            completion = client.chat.completions.create(
-                model=MODEL,
+            completion = MODEL_MANAGER.create_chat_completion(
+                model_or_alias=MODEL,
                 messages=messages,
                 temperature=0.2,
                 top_p=0.7,
@@ -205,6 +193,7 @@ if __name__ == "__main__":
         from key_generator import generate_api_key
         key = generate_api_key()
         if key:
+            os.environ["NVIDIA_API_KEY"] = key
             print("API key generated successfully.")
         else:
             print("Failed to generate API key.")
