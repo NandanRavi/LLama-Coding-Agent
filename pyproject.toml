@@ -4,7 +4,23 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "llamacode"
-version = "1.0.0"
+version = "1.1.0"
+description = "Multi-model coding agent powered by NVIDIA Llama (3B, 70B) with CLI, web search, and tool-use loop"
+readme = "README.md"
+license = "MIT"
+requires-python = ">=3.10"
+dependencies = [
+    "openai>=1.0.0",
+    "python-dotenv>=1.0.0",
+    "httpx>=0.28.0",
+]
+
+[project.optional-dependencies]
+server = ["fastapi>=0.110", "uvicorn>=0.29"]
+keygen = ["playwright>=1.40"]
+
+[project.urls]
+Homepage = "https://github.com/anomalyco/third_party_connect"
 
 [project.scripts]
 llamacode = "coding_agent:main"
@@ -12,3 +28,4 @@ llamacode = "coding_agent:main"
 [tool.setuptools]
 py-modules = ["coding_agent", "key_generator", "api_server"]
 packages = ["agents", "core"]
+include-package-data = false

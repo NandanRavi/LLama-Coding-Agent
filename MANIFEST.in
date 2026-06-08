@@ -1,0 +1,7 @@
+include README.md
+include LICENSE
+exclude .env
+exclude .gitignore
+exclude llamacode_commands.txt
+recursive-exclude .agent *
+recursive-exclude dist *

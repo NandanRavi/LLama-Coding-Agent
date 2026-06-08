@@ -7,8 +7,39 @@ from pathlib import Path
 
 from dotenv import load_dotenv
 
-NVIDIA_URL = "https://build.nvidia.com/meta/llama-3_3-70b-instruct"
 KEY_PATTERN = re.compile(r"nvapi-[A-Za-z0-9_-]+")
+
+MODEL_URLS = {
+    "3B": "https://build.nvidia.com/meta/llama-3_2-3b-instruct",
+    "70B": "https://build.nvidia.com/meta/llama-3_3-70b-instruct",
+}
+
+MODEL_ENV_VARS = {
+    "3B": "NVIDIA_API_KEY_LLAMA_3_2_3B",
+    "70B": "NVIDIA_API_KEY",
+}
+
+
+def select_model_interactive():
+    print()
+    print("  " + "=" * 58)
+    print("       Generate API Key")
+    print("  " + "=" * 58)
+    print()
+    print("  [1] Llama 3.2 3B  (saves as NVIDIA_API_KEY_LLAMA_3_2_3B)")
+    print("  [2] Llama 3.3 70B (saves as NVIDIA_API_KEY)")
+    print()
+    while True:
+        try:
+            choice = input("  Select [1-2]: ").strip()
+        except (EOFError, KeyboardInterrupt):
+            print()
+            return "3B"
+        if choice == "1":
+            return "3B"
+        if choice == "2":
+            return "70B"
+        print("  Invalid choice. Enter 1 or 2.")
 
 
 def check_playwright_installed():
@@ -42,42 +73,50 @@ def install_playwright():
         return False
 
 
-def save_key_to_files(api_key: str, workdir: str = "."):
+def save_key_to_files(api_key: str, env_var: str, workdir: str = "."):
     key_file = Path(workdir) / "nvidia_api_key.txt"
     key_file.write_text(api_key, encoding="utf-8")
     print(f"  Key saved to: {key_file}")
 
     env_path = Path(workdir) / ".env"
+    entry = f"{env_var}={api_key}"
     if env_path.exists():
         content = env_path.read_text(encoding="utf-8")
-        if "NVIDIA_API_KEY=" in content:
-            content = re.sub(r"NVIDIA_API_KEY=.*", f"NVIDIA_API_KEY={api_key}", content)
+        if env_var + "=" in content:
+            content = re.sub(rf"{re.escape(env_var)}=.*", entry, content)
         else:
-            content += f"\nNVIDIA_API_KEY={api_key}\n"
+            content += f"\n{entry}\n"
         env_path.write_text(content, encoding="utf-8")
         print(f"  .env updated: {env_path}")
     else:
-        env_path.write_text(f"NVIDIA_API_KEY={api_key}\n", encoding="utf-8")
+        env_path.write_text(f"{entry}\n", encoding="utf-8")
         print(f"  .env created: {env_path}")
 
     home_env = Path.home() / ".coding_agent" / ".env"
     home_env.parent.mkdir(parents=True, exist_ok=True)
     if home_env.exists():
         content = home_env.read_text(encoding="utf-8")
-        if "NVIDIA_API_KEY=" in content:
-            content = re.sub(r"NVIDIA_API_KEY=.*", f"NVIDIA_API_KEY={api_key}", content)
+        if env_var + "=" in content:
+            content = re.sub(rf"{re.escape(env_var)}=.*", entry, content)
         else:
-            content += f"\nNVIDIA_API_KEY={api_key}\n"
+            content += f"\n{entry}\n"
         home_env.write_text(content, encoding="utf-8")
     else:
-        home_env.write_text(f"NVIDIA_API_KEY={api_key}\n", encoding="utf-8")
+        home_env.write_text(f"{entry}\n", encoding="utf-8")
     print(f"  Home .env updated: {home_env}")
 
     load_dotenv(env_path, override=True)
-    os.environ["NVIDIA_API_KEY"] = api_key
+    os.environ[env_var] = api_key
 
 
-def generate_api_key(workdir: str = "."):
+def generate_api_key(model: str = "70B", workdir: str = "."):
+    if model not in MODEL_URLS:
+        print(f"  Unknown model '{model}'. Use '3B' or '70B'.")
+        return None
+
+    url = MODEL_URLS[model]
+    env_var = MODEL_ENV_VARS[model]
+
     if not check_playwright_installed():
         if not install_playwright():
             print("  Cannot proceed without playwright.")
@@ -110,16 +149,18 @@ def generate_api_key(workdir: str = "."):
 
         page.on("response", on_response)
 
-        page.goto(NVIDIA_URL, wait_until="domcontentloaded")
+        page.goto(url, wait_until="domcontentloaded")
 
         print()
         print("  " + "=" * 58)
-        print("  NVIDIA API Key Generator")
+        print(f"  NVIDIA API Key Generator — Llama {model}")
         print("  " + "=" * 58)
         print()
         print("  A browser window has opened to build.nvidia.com")
         print("  Please log in to your NVIDIA account in the browser.")
         print("  The key will be detected automatically once generated.")
+        print()
+        print(f"  It will be saved as: {env_var}")
         print()
         print("  Press Ctrl+C at any time to cancel.")
         print()
@@ -170,7 +211,7 @@ def generate_api_key(workdir: str = "."):
 
     if found_key:
         print(f"\n  API Key detected: {found_key}")
-        save_key_to_files(found_key, workdir)
+        save_key_to_files(found_key, env_var, workdir)
         return found_key
     else:
         print("\n  No API key detected within the timeout period.")

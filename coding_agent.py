@@ -710,10 +710,12 @@ def main():
     global MODEL_MANAGER, MODEL
 
     if args.generate_key:
-        from key_generator import generate_api_key
-        key = generate_api_key()
+        from key_generator import generate_api_key, select_model_interactive
+        model = select_model_interactive()
+        key = generate_api_key(model)
         if key:
-            os.environ["NVIDIA_API_KEY"] = key
+            env_var = "NVIDIA_API_KEY_LLAMA_3_2_3B" if model == "3B" else "NVIDIA_API_KEY"
+            os.environ[env_var] = key
             MODEL_MANAGER = ModelManager()
         else:
             print("Failed to generate API key.")
@@ -722,13 +724,15 @@ def main():
     if not MODEL_MANAGER.key_3b and not MODEL_MANAGER.key_70b:
         print("  \033[1;33mNo API keys found.\033[0m")
         print("  Set NVIDIA_API_KEY_LLAMA_3_2_3B in .env for the 3B model,")
-        print("  or run \033[1mllamacode --generate-key\033[0m for a 70B key.")
-        choice = input("  Generate 70B key now? [Y/n]: ").strip().lower() or "y"
+        print("  or run \033[1mllamacode --generate-key\033[0m to generate a key.")
+        choice = input("  Generate a key now? [Y/n]: ").strip().lower() or "y"
         if choice[0] != "n":
-            from key_generator import generate_api_key
-            key = generate_api_key()
+            from key_generator import generate_api_key, select_model_interactive
+            model = select_model_interactive()
+            key = generate_api_key(model)
             if key:
-                os.environ["NVIDIA_API_KEY"] = key
+                env_var = "NVIDIA_API_KEY_LLAMA_3_2_3B" if model == "3B" else "NVIDIA_API_KEY"
+                os.environ[env_var] = key
                 MODEL_MANAGER = ModelManager()
         if not MODEL_MANAGER.has_any_key():
             print("No API keys available. Exiting.")
