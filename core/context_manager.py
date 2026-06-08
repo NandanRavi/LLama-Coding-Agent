@@ -5,7 +5,7 @@ from core.summary_cache import SummaryCache
 
 
 class ContextManager:
-    def __init__(self, workdir: str, max_messages: int = 10):
+    def __init__(self, workdir: str, max_messages: int = 30):
         self.workdir = workdir
         self.max_messages = max_messages
         self.file_manager = FileManager(workdir)

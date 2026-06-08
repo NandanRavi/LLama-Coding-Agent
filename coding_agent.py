@@ -107,7 +107,9 @@ After the tool executes, you'll get the result. Then continue your reasoning and
 - Prefer editing existing files over rewriting them
 - Run linting or tests after making changes
 - Be concise and direct in your responses
-- Use the think tool to plan your approach"""
+- Use the think tool to plan your approach
+- Correct obvious typos in user requests (e.g. "calcualtor" -> "calculator") and fulfill the intended request
+- Remember the full conversation history — refer back to earlier messages when relevant"""
 
 TOOL_PATTERN = re.compile(
     r'<tool>\s*<name>(.*?)</name>\s*<args>\s*(.*?)\s*</args>\s*</tool>',
@@ -216,10 +218,17 @@ class CodingAgent:
 
     # --- Agent Loop ---
 
+    def _clean_response(self, text: str) -> str:
+        text = re.sub(r'<tool>.*?</tool>', '', text, flags=re.DOTALL)
+        text = re.sub(r'<think>.*?</think>', '', text, flags=re.DOTALL)
+        return text.strip()
+
     def parse_tool_calls(self, text: str):
         calls = []
         for match in TOOL_PATTERN.finditer(text):
             name = match.group(1).strip()
+            if name == "think":
+                continue
             try:
                 args = json.loads(match.group(2).strip())
             except json.JSONDecodeError:
@@ -269,6 +278,7 @@ class CodingAgent:
             "  Reviewing output",
         ]
 
+        think_only_count = 0
         max_iterations = 25
         for iteration in range(max_iterations):
             phase = phases[iteration % len(phases)] if iteration > 0 else "  Processing request"
@@ -278,18 +288,22 @@ class CodingAgent:
             if not reply:
                 reply = ""
 
+            clean_reply = self._clean_response(reply)
             tool_calls = self.parse_tool_calls(reply)
 
             if not tool_calls:
-                self.messages.append({"role": "assistant", "content": reply})
-                return reply
+                if clean_reply:
+                    final = clean_reply
+                else:
+                    think_match = re.search(r'<think>(.*?)</think>', reply, re.DOTALL)
+                    final = think_match.group(1).strip() if think_match else "I'm ready to help."
+                self.messages.append({"role": "assistant", "content": final})
+                return final
+
+            if not clean_reply:
+                think_only_count += 1
 
             for tool_name, tool_args in tool_calls:
-                if tool_name == "think":
-                    result = self.execute_tool(tool_name, tool_args)
-                    self.messages.append({"role": "assistant", "content": reply})
-                    continue
-
                 result = self.execute_tool(tool_name, tool_args)
                 truncated = result[:1000] + "..." if len(result) > 1000 else result
                 self.messages.append({
@@ -303,11 +317,20 @@ class CodingAgent:
                 self.messages = self.context_manager.trim_messages(self.messages)
                 break
 
-            if iteration == max_iterations - 1:
-                self.messages.append({"role": "assistant", "content": reply})
-                return reply
+            if think_only_count >= 3:
+                final = clean_reply
+                if not final:
+                    think_match = re.search(r'<think>(.*?)</think>', reply, re.DOTALL)
+                    final = think_match.group(1).strip() if think_match else "I'm ready to help."
+                self.messages.append({"role": "assistant", "content": final})
+                return final
 
-        return reply
+            if iteration == max_iterations - 1:
+                final = self._clean_response(reply) or "Done."
+                self.messages.append({"role": "assistant", "content": final})
+                return final
+
+        return self._clean_response(reply) or "Done."
 
     def start_cli(self):
         global MODEL
@@ -315,7 +338,7 @@ class CodingAgent:
         print("  \033[1;36m" + "=" * 58 + "\033[0m")
         print("  \033[1;36m    LLaMACode - Coding Agent CLI\033[0m")
         current_alias = self._model_label()
-        label_map = {"llama-3.2-1b": "Llama 3.2 1B", "llama-3.2-3b": "Llama 3.2 3B", "llama-3.3-70b": "Llama 3.3 70B", "llama-3.2": "Llama 3.2 3B", "llama-3.3": "Llama 3.3 70B"}
+        label_map = {"llama-3.2-3b": "Llama 3.2 3B", "llama-3.2": "Llama 3.2 3B", "llama-3.3-70b": "Llama 3.3 70B", "llama-3.3": "Llama 3.3 70B"}
         friendly = label_map.get(current_alias, current_alias)
         print(f"  \033[1;36m  Model: {friendly}  |  Workdir: {os.path.basename(self.workdir)}\033[0m")
         print("  \033[1;36m" + "=" * 58 + "\033[0m")
@@ -351,12 +374,12 @@ class CodingAgent:
 
             if cmd == "/status":
                 current_alias = next((k for k, v in AVAILABLE_MODELS.items() if v == MODEL), "unknown")
-                label_map = {"llama-3.2-1b": "Llama 3.2 1B", "llama-3.2-3b": "Llama 3.2 3B", "llama-3.3-70b": "Llama 3.3 70B", "llama-3.2": "Llama 3.2 3B", "llama-3.3": "Llama 3.3 70B"}
+                label_map = {"llama-3.2-3b": "Llama 3.2 3B", "llama-3.2": "Llama 3.2 3B", "llama-3.3-70b": "Llama 3.3 70B", "llama-3.3": "Llama 3.3 70B"}
                 friendly = label_map.get(current_alias, current_alias)
                 print(f"  Messages: {len(self.messages)}")
                 print(f"  Workdir: {self.workdir}")
                 print(f"  Model: {friendly} ({MODEL})")
-                config_map = {"1B": MODEL_MANAGER.key_1b, "3B": MODEL_MANAGER.key_3b, "70B (your own)": MODEL_MANAGER.key_70b}
+                config_map = {"3B": MODEL_MANAGER.key_3b, "70B (your own)": MODEL_MANAGER.key_70b}
                 for k, v in config_map.items():
                     status = "\033[1;32m✓\033[0m" if v else "\033[1;31m✗\033[0m"
                     print(f"  {k:15s} key: {status}")
@@ -372,11 +395,11 @@ class CodingAgent:
                             print("  Run \033[1mllamacode --generate-key\033[0m or set NVIDIA_API_KEY in .env")
                             continue
                         MODEL = AVAILABLE_MODELS[alias]
-                        label_map = {"llama-3.2-1b": "Llama 3.2 1B", "llama-3.2-3b": "Llama 3.2 3B", "llama-3.3-70b": "Llama 3.3 70B"}
+                        label_map = {"llama-3.2-3b": "Llama 3.2 3B", "llama-3.3-70b": "Llama 3.3 70B"}
                         friendly = label_map.get(alias, alias)
                         print(f"  \033[1;32mSwitched to: {friendly}\033[0m")
                     else:
-                        print(f"  Available models: llama-3.2-1b, llama-3.2-3b, llama-3.3-70b")
+                        print(f"  Available models: llama-3.2-3b, llama-3.3-70b")
                 else:
                     _select_model_interactive()
                 continue
@@ -476,7 +499,7 @@ class CodingAgent:
                 print("    \033[1m/clear\033[0m        Clear conversation history")
                 print("    \033[1m/status\033[0m       Show session info (messages, workdir, model)")
                 print("    \033[1m/model\033[0m         Show current model")
-                print("    \033[1m/model <name>\033[0m  Switch model (llama-3.2-1b, llama-3.2-3b, llama-3.3-70b)")
+                print("    \033[1m/model <name>\033[0m  Switch model (llama-3.2-3b, llama-3.3-70b)")
                 print("    \033[1m/workdir\033[0m      Show or change working directory")
                 print("    \033[1m/workdir <path>\033[0m  Change working directory to <path>")
                 print("    \033[1m/index\033[0m        Build .agent/project_index.json")
@@ -493,6 +516,17 @@ class CodingAgent:
                 print("    to complete your request automatically.")
                 continue
 
+            if cmd.startswith("/"):
+                _commands = ["/exit", "/new", "/clear", "/status", "/model", "/workdir", "/index", "/save", "/load", "/undo", "/compact", "/help"]
+                matched = any(cmd == c or cmd.startswith(c + " ") for c in _commands)
+                if not matched:
+                    suggestions = [c for c in _commands if c.startswith(cmd)]
+                    if suggestions:
+                        print(f"  Did you mean: \033[1;33m{', '.join(suggestions)}\033[0m")
+                    else:
+                        print(f"  Unknown command. Type \033[1m/help\033[0m for available commands.")
+                    continue
+
             print()
             result = self.run_tool_loop(user_input)
             print(f"\033[1;34mAgent\033[0m > {result}")
@@ -503,9 +537,8 @@ def _select_model_interactive(show_header=True):
     global MODEL, MODEL_MANAGER
     current_alias = next((k for k, v in AVAILABLE_MODELS.items() if v == MODEL), "llama-3.2-3b")
     models = [
-        ("1", "llama-3.2-1b", "Llama 3.2 1B", "Fastest, lightweight tasks", MODEL_MANAGER.key_1b),
-        ("2", "llama-3.2-3b", "Llama 3.2 3B", "Balanced, default model", MODEL_MANAGER.key_3b),
-        ("3", "llama-3.3-70b", "Llama 3.3 70B", "Most powerful (needs your own key)", MODEL_MANAGER.key_70b),
+        ("1", "llama-3.2-3b", "Llama 3.2 3B", "Balanced, default model", MODEL_MANAGER.key_3b),
+        ("2", "llama-3.3-70b", "Llama 3.3 70B", "Most powerful (needs your own key)", MODEL_MANAGER.key_70b),
     ]
     if show_header:
         print()
@@ -518,11 +551,11 @@ def _select_model_interactive(show_header=True):
         marker = " \033[1;33m← current\033[0m" if alias == current_alias else ""
         print(f"  [{key}] {name:20s} {desc:35s} Key: {icon}{marker}")
     print()
-    choice = input(f"  Select [1-3] (Enter to keep current): ").strip()
+    choice = input(f"  Select [1-2] (Enter to keep current): ").strip()
     if not choice:
         print(f"  Keeping \033[1;33m{current_alias}\033[0m.")
         return
-    mapping = {"1": "llama-3.2-1b", "2": "llama-3.2-3b", "3": "llama-3.3-70b"}
+    mapping = {"1": "llama-3.2-3b", "2": "llama-3.3-70b"}
     alias = mapping.get(choice)
     if not alias:
         print(f"  Keeping \033[1;33m{current_alias}\033[0m.")
@@ -530,7 +563,8 @@ def _select_model_interactive(show_header=True):
     if alias in ("llama-3.3-70b", "llama-3.3") and not MODEL_MANAGER.key_70b:
         print()
         print("  \033[1;33m70B needs your own NVIDIA API key.\033[0m")
-        print("  Generate one now via browser? [Y/n]: ", end="")
+        print("  Run \033[1mllamacode --generate-key\033[0m to generate one via browser.")
+        print("  Generate now? [Y/n]: ", end="")
         try:
             resp = input().strip().lower()
         except (EOFError, KeyboardInterrupt):
@@ -547,7 +581,7 @@ def _select_model_interactive(show_header=True):
         print("  \033[1;31mNo 70B key. Falling back to default.\033[0m")
         alias = "llama-3.2-3b"
     MODEL = AVAILABLE_MODELS[alias]
-    label_map = {"llama-3.2-1b": "Llama 3.2 1B", "llama-3.2-3b": "Llama 3.2 3B", "llama-3.3-70b": "Llama 3.3 70B"}
+    label_map = {"llama-3.2-3b": "Llama 3.2 3B", "llama-3.3-70b": "Llama 3.3 70B"}
     print(f"  \033[1;32mUsing {label_map.get(alias, alias)}\033[0m")
 
 
@@ -557,7 +591,7 @@ def main():
     parser.add_argument("--generate-key", action="store_true",
                         help="Generate NVIDIA API key via browser")
     parser.add_argument("--model", type=str, default=None,
-                        help="Model to use: llama-3.2-1b, llama-3.2-3b (default), or llama-3.3-70b")
+                        help="Model to use: llama-3.2-3b (default) or llama-3.3-70b")
     args = parser.parse_args()
 
     global MODEL_MANAGER, MODEL
@@ -572,10 +606,9 @@ def main():
             print("Failed to generate API key.")
             sys.exit(1)
 
-    has_1b_or_3b = MODEL_MANAGER.key_1b or MODEL_MANAGER.key_3b
-    if not has_1b_or_3b and not MODEL_MANAGER.key_70b:
-        print("  \033[1;33mNo API keys found for 1B or 3B models.\033[0m")
-        print("  Set NVIDIA_API_KEY_LLAMA_3_2_1B and NVIDIA_API_KEY_LLAMA_3_2_3B in .env")
+    if not MODEL_MANAGER.key_3b and not MODEL_MANAGER.key_70b:
+        print("  \033[1;33mNo API keys found.\033[0m")
+        print("  Set NVIDIA_API_KEY_LLAMA_3_2_3B in .env for the 3B model,")
         print("  or run \033[1mllamacode --generate-key\033[0m for a 70B key.")
         choice = input("  Generate 70B key now? [Y/n]: ").strip().lower() or "y"
         if choice[0] != "n":

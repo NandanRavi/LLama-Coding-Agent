@@ -2,7 +2,7 @@
 
 A coding agent powered by NVIDIA Llama models that runs in your terminal. It can read, write, and edit files, run shell commands, search code, and more.
 
-Choose from three model tiers — **1B** (fast & cheap), **3B** (balanced, default), or **70B** (most powerful, needs your own API key).
+Choose from two model tiers — **3B** (balanced, default) or **70B** (most powerful, needs your own API key).
 
 ## Installation
 
@@ -14,10 +14,10 @@ pip install llamacode
 
 LLaMACode uses NVIDIA's hosted Llama models. Different models need different API keys:
 
-### 1B & 3B Models (pre-configured)
+### 3B Model (pre-configured)
 
-The **Llama 3.2 1B** and **Llama 3.2 3B** models come with pre-configured API keys bundled in the project.  
-They work out of the box — no additional setup required.
+The **Llama 3.2 3B** model comes with a pre-configured API key bundled in the project.  
+It works out of the box — no additional setup required.
 
 ### 70B Model (bring your own key)
 
@@ -68,11 +68,10 @@ On first run, you'll see an interactive model picker:
      LLaMACode - Choose a Model
   ══════════════════════════════════════════════════════════════
 
-  [1] Llama 3.2 1B        Fastest, lightweight tasks               Key: ✓
-  [2] Llama 3.2 3B        Balanced, default model                  Key: ✓
-  [3] Llama 3.3 70B       Most powerful (needs your own key)       Key: ✗
+  [1] Llama 3.2 3B        Balanced, default model                  Key: ✓
+  [2] Llama 3.3 70B       Most powerful (needs your own key)       Key: ✗
 
-  Select [1-3] (default: 2):
+  Select [1-2] (Enter to keep current):
 ```
 
 While processing, you'll see an animated spinner showing which phase is active:
@@ -105,7 +104,6 @@ While processing, you'll see an animated spinner showing which phase is active:
 Use `/model` to switch models during a session:
 
 ```
-/model llama-3.2-1b    → Llama 3.2 1B (fastest)
 /model llama-3.2-3b    → Llama 3.2 3B (balanced, default)
 /model llama-3.3-70b   → Llama 3.3 70B (most powerful)
 ```
@@ -114,10 +112,8 @@ Use `/model` to switch models during a session:
 
 | Alias              | Model ID                         | Size | Key Required         |
 | ------------------ | -------------------------------- | ---- | -------------------- |
-| `llama-3.2-1b`     | `meta/llama-3.2-1b-instruct`    | 1B   | Pre-configured (env) |
 | `llama-3.2-3b`     | `meta/llama-3.2-3b-instruct`    | 3B   | Pre-configured (env) |
 | `llama-3.3-70b`    | `meta/llama-3.3-70b-instruct`   | 70B  | Your own key         |
 
-- **1B models** are used internally for planning and search (fast, cheap).
-- **3B models** handle coding, reviewing, and summarizing (balanced, default).
+- **3B model** handles coding, reviewing, and summarizing (balanced, default).
 - **70B model** is the most powerful — use it for complex tasks. Requires your own NVIDIA API key.

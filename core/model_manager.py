@@ -10,21 +10,19 @@ load_dotenv(os.path.expanduser("~/.coding_agent/.env"))
 
 NVIDIA_BASE_URL = "https://integrate.api.nvidia.com/v1"
 
-LLAMA_3_2_1B = "meta/llama-3.2-1b-instruct"
 LLAMA_3_2_3B = "meta/llama-3.2-3b-instruct"
 LLAMA_3_3_70B = "meta/llama-3.3-70b-instruct"
 
 MODEL_ALIASES = {
-    "llama-3.2-1b": LLAMA_3_2_1B,
     "llama-3.2-3b": LLAMA_3_2_3B,
     "llama-3.2": LLAMA_3_2_3B,
-    "llama-3.3": LLAMA_3_3_70B,
     "llama-3.3-70b": LLAMA_3_3_70B,
+    "llama-3.3": LLAMA_3_3_70B,
 }
 
 AGENT_MODELS = {
-    "planner": LLAMA_3_2_1B,
-    "search": LLAMA_3_2_1B,
+    "planner": LLAMA_3_2_3B,
+    "search": LLAMA_3_2_3B,
     "summary": LLAMA_3_2_3B,
     "review": LLAMA_3_2_3B,
     "coder": LLAMA_3_2_3B,
@@ -42,11 +40,6 @@ class ModelManager:
     """Centralizes NVIDIA model and API key selection."""
 
     def __init__(self):
-        self.key_1b = self._env(
-            "NVIDIA_API_KEY_LLAMA_3_2_1B",
-            "NVIDIA_LLAMA_3_2_1B_API_KEY",
-            "NVIDIA_API_KEY_1B",
-        )
         self.key_3b = self._env(
             "NVIDIA_API_KEY_LLAMA_3_2_3B",
             "NVIDIA_LLAMA_3_2_3B_API_KEY",
@@ -84,13 +77,11 @@ class ModelManager:
         return MODEL_ALIASES.get(model_or_alias, model_or_alias)
 
     def key_for_model(self, model: str) -> Optional[str]:
-        if model == LLAMA_3_2_1B:
-            return self.key_1b
         if model == LLAMA_3_2_3B:
             return self.key_3b
         if model == LLAMA_3_3_70B:
             return self.key_70b
-        return self.key_3b or self.key_70b or self.key_1b
+        return self.key_3b or self.key_70b
 
     def config_for(self, model_or_alias: Optional[str] = None, agent: Optional[str] = None) -> ModelConfig:
         model = self.resolve_model(model_or_alias, agent)
@@ -121,14 +112,9 @@ class ModelManager:
         return bool(self.key_3b)
 
     def has_any_key(self) -> bool:
-        return bool(self.key_1b or self.key_3b or self.key_70b)
+        return bool(self.key_3b or self.key_70b)
 
     def missing_key_message(self, model: str) -> str:
-        if model == LLAMA_3_2_1B:
-            return (
-                "Missing API key for meta/llama-3.2-1b-instruct. "
-                "Set NVIDIA_API_KEY_LLAMA_3_2_1B in .env."
-            )
         if model == LLAMA_3_2_3B:
             return (
                 "Missing API key for meta/llama-3.2-3b-instruct. "
