@@ -13,3 +13,6 @@ build/
 # IDE
 .vscode/
 .idea/
+
+# Local-only files
+llamacode_commands.txt
