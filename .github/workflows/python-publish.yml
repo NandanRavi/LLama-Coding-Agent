@@ -1,0 +1,39 @@
+name: Publish to PyPI
+
+on:
+  push:
+    tags:
+      - "v*"
+
+jobs:
+  build-and-publish:
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install build tools
+        run: |
+          pip install build twine
+          pip install -e .
+
+      - name: Build package
+        run: python -m build
+
+      - name: Check that .env is excluded
+        run: |
+          tar --list -f dist/llamacode-*.tar.gz | grep -v dist-info
+          if tar --list -f dist/llamacode-*.tar.gz | grep -q "\.env"; then
+            echo "ERROR: .env found in package!"
+            exit 1
+          fi
+
+      - name: Publish to PyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
