@@ -6,9 +6,12 @@ import subprocess
 import sys
 import threading
 import time
+from html.parser import HTMLParser
 from pathlib import Path
 from typing import Optional
+from urllib.parse import quote_plus
 
+import httpx
 from dotenv import load_dotenv
 from core.context_manager import ContextManager
 from core.file_manager import FileManager
@@ -102,6 +105,12 @@ After the tool executes, you'll get the result. Then continue your reasoning and
 7. **think** - Use this to reason about the task before responding
    args: { "thought": "your reasoning here" }
 
+8. **web_search** - Search the internet for current information
+   args: { "query": "search query" }
+
+9. **web_fetch** - Fetch and extract text content from a URL
+   args: { "url": "https://example.com/page" }
+
 ## Guidelines
 - Always think step by step before acting
 - Prefer editing existing files over rewriting them
@@ -109,7 +118,27 @@ After the tool executes, you'll get the result. Then continue your reasoning and
 - Be concise and direct in your responses
 - Use the think tool to plan your approach
 - Correct obvious typos in user requests (e.g. "calcualtor" -> "calculator") and fulfill the intended request
-- Remember the full conversation history — refer back to earlier messages when relevant"""
+- Remember the full conversation history — refer back to earlier messages when relevant
+- Use web_search to find current information, documentation, or answers you don't know
+- Use web_fetch to read the full content of a specific URL found via web_search
+
+## Example: When a user asks you to write code, you MUST use the write_file tool.
+Do NOT just describe what you would do — actually create the file.
+
+Example:
+User: write a python script to calculate fibonacci
+Assistant:
+<think>The user wants a Python script. I'll create fib.py with a Fibonacci implementation and run it.</think>
+<tool>
+<name>write_file</name>
+<args>
+{
+  "path": "fib.py",
+  "content": "def fib(n):\n    a, b = 0, 1\n    for _ in range(n):\n        print(a, end=' ')\n        a, b = b, a + b\n    print()\n\nfib(10)\n"
+}
+</args>
+</tool>
+After the tool runs, verify and then respond with a summary. Do NOT skip the tool call and pretend you created the file."""
 
 TOOL_PATTERN = re.compile(
     r'<tool>\s*<name>(.*?)</name>\s*<args>\s*(.*?)\s*</args>\s*</tool>',
@@ -203,6 +232,82 @@ class CodingAgent:
         except Exception as e:
             return f"Error grepping: {e}"
 
+    def tool_web_search(self, query: str) -> str:
+        try:
+            url = f"https://html.duckduckgo.com/html/?q={quote_plus(query)}"
+            with httpx.Client(timeout=15.0, follow_redirects=True) as client:
+                resp = client.get(url, headers={"User-Agent": "Mozilla/5.0"})
+                resp.raise_for_status()
+            results = self._parse_ddg_results(resp.text)
+            if not results:
+                return "(no search results found)"
+            return "\n\n".join(results[:5])
+        except Exception as e:
+            return f"Search error: {e}"
+
+    def tool_web_fetch(self, url: str) -> str:
+        try:
+            with httpx.Client(timeout=20.0, follow_redirects=True) as client:
+                resp = client.get(url, headers={"User-Agent": "Mozilla/5.0"})
+                resp.raise_for_status()
+            text = self._extract_text(resp.text)
+            if len(text) > 3000:
+                text = text[:3000] + "..."
+            return text.strip() or "(no text content extracted)"
+        except Exception as e:
+            return f"Fetch error: {e}"
+
+    @staticmethod
+    def _parse_ddg_results(html: str):
+        class Parser(HTMLParser):
+            def __init__(self):
+                super().__init__()
+                self.results = []
+                self._capture = False
+                self._buf = ""
+                self._tag_stack = []
+            def handle_starttag(self, tag, attrs):
+                attrs = dict(attrs)
+                if tag == "a" and attrs.get("class") == "result__a":
+                    self._capture = True
+                    self._buf = ""
+                    self._current_link = attrs.get("href", "")
+                self._tag_stack.append(tag)
+            def handle_data(self, data):
+                if self._capture:
+                    self._buf += data
+            def handle_endtag(self, tag):
+                if tag == "a" and self._capture:
+                    self.results.append(f"{self._buf.strip()}\n  {self._current_link}")
+                    self._capture = False
+                if self._tag_stack and self._tag_stack[-1] == tag:
+                    self._tag_stack.pop()
+        parser = Parser()
+        parser.feed(html)
+        return parser.results
+
+    @staticmethod
+    def _extract_text(html: str):
+        class Parser(HTMLParser):
+            def __init__(self):
+                super().__init__()
+                self.parts = []
+                self._skip = False
+            def handle_starttag(self, tag, attrs):
+                if tag in ("script", "style"):
+                    self._skip = True
+            def handle_endtag(self, tag):
+                if tag in ("script", "style"):
+                    self._skip = False
+            def handle_data(self, data):
+                if not self._skip:
+                    stripped = data.strip()
+                    if stripped:
+                        self.parts.append(stripped)
+        parser = Parser()
+        parser.feed(html)
+        return " ".join(parser.parts)
+
     def tool_think(self, thought: str) -> str:
         return f"Understood. Continuing with this reasoning in mind."
 
@@ -214,6 +319,8 @@ class CodingAgent:
         "glob": tool_glob,
         "grep": tool_grep,
         "think": tool_think,
+        "web_search": tool_web_search,
+        "web_fetch": tool_web_fetch,
     }
 
     # --- Agent Loop ---
@@ -293,6 +400,12 @@ class CodingAgent:
 
             if not tool_calls:
                 if clean_reply:
+                    if iteration == 0 and any(kw in user_input.lower() for kw in ["write", "create", "make", "build", "generate", "implement", "code", "script", "program"]):
+                        self.messages.append({
+                            "role": "user",
+                            "content": "You answered with text but did NOT use any tools. The user wants actual code — you MUST use the write_file tool. Try again with proper tool calls."
+                        })
+                        continue
                     final = clean_reply
                 else:
                     think_match = re.search(r'<think>(.*?)</think>', reply, re.DOTALL)
