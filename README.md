@@ -63,10 +63,10 @@ Prompts you to pick 3B or 70B, opens build.nvidia.com, detects and saves the key
 
 Create a `.env` file in one of these locations:
 
-| Location | Path |
-|----------|------|
+| Location                     | Path                               |
+| ---------------------------- | ---------------------------------- |
 | Home directory (recommended) | `%USERPROFILE%\.coding_agent\.env` |
-| Current working directory | `.env` |
+| Current working directory    | `.env`                             |
 
 Contents:
 
@@ -85,9 +85,9 @@ export NVIDIA_API_KEY_LLAMA_3_2_3B=nvapi-your-key   # bash
 
 llamacode checks these env var names (in order):
 
-| Model | Env vars checked |
-|-------|-----------------|
-| **3B** | `NVIDIA_API_KEY_LLAMA_3_2_3B`, `NVIDIA_LLAMA_3_2_3B_API_KEY`, `NVIDIA_API_KEY_3B` |
+| Model   | Env vars checked                                                                                       |
+| ------- | ------------------------------------------------------------------------------------------------------ |
+| **3B**  | `NVIDIA_API_KEY_LLAMA_3_2_3B`, `NVIDIA_LLAMA_3_2_3B_API_KEY`, `NVIDIA_API_KEY_3B`                      |
 | **70B** | `NVIDIA_API_KEY_LLAMA_3_3_70B`, `NVIDIA_LLAMA_3_3_70B_API_KEY`, `NVIDIA_API_KEY_70B`, `NVIDIA_API_KEY` |
 
 ## Usage
@@ -101,23 +101,23 @@ llamacode --generate-key             # generate API key via browser
 
 ### CLI Commands
 
-| Command | Description |
-|---------|-------------|
-| `/exit` | Exit the CLI |
-| `/new` | Start a new session |
-| `/clear` | Clear conversation history |
-| `/status` | Show session info, model, workdir, key status |
-| `/model` | Open interactive model picker |
-| `/model <name>` | Switch model (`llama-3.2-3b`, `llama-3.3-70b`) |
-| `/workdir` | Show working directory |
-| `/workdir <path>` | Change working directory |
-| `/index` | Build `.agent/project_index.json` |
-| `/save` | Save conversation to timestamped file |
-| `/save <file>` | Save conversation to a specific file |
-| `/load <file>` | Load a saved conversation |
-| `/undo` | Remove the last exchange |
-| `/compact` | Summarize conversation to save context |
-| `/help` | Show help |
+| Command           | Description                                    |
+| ----------------- | ---------------------------------------------- |
+| `/exit`           | Exit the CLI                                   |
+| `/new`            | Start a new session                            |
+| `/clear`          | Clear conversation history                     |
+| `/status`         | Show session info, model, workdir, key status  |
+| `/model`          | Open interactive model picker                  |
+| `/model <name>`   | Switch model (`llama-3.2-3b`, `llama-3.3-70b`) |
+| `/workdir`        | Show working directory                         |
+| `/workdir <path>` | Change working directory                       |
+| `/index`          | Build `.agent/project_index.json`              |
+| `/save`           | Save conversation to timestamped file          |
+| `/save <file>`    | Save conversation to a specific file           |
+| `/load <file>`    | Load a saved conversation                      |
+| `/undo`           | Remove the last exchange                       |
+| `/compact`        | Summarize conversation to save context         |
+| `/help`           | Show help                                      |
 
 ### Switching Models at Runtime
 
@@ -130,10 +130,10 @@ The 70B model switches immediately only if you have an NVIDIA API key configured
 
 ## Available Models
 
-| Alias | Model ID | Size | Key Required |
-|-------|----------|------|-------------|
-| `llama-3.2-3b` | `meta/llama-3.2-3b-instruct` | 3B | User-provided |
-| `llama-3.3-70b` | `meta/llama-3.3-70b-instruct` | 70B | User-provided |
+| Alias           | Model ID                      | Size | Key Required  |
+| --------------- | ----------------------------- | ---- | ------------- |
+| `llama-3.2-3b`  | `meta/llama-3.2-3b-instruct`  | 3B   | User-provided |
+| `llama-3.3-70b` | `meta/llama-3.3-70b-instruct` | 70B  | User-provided |
 
 - **3B** — handles coding, reviewing, and summarizing (balanced, default).
 - **70B** — most powerful; best for complex reasoning tasks. Requires your own NVIDIA API key.
@@ -142,17 +142,17 @@ The 70B model switches immediately only if you have an NVIDIA API key configured
 
 LLaMACode has a built-in tool loop that lets the agent autonomously work through tasks:
 
-| Tool | Description |
-|------|-------------|
-| `read_file` | Read a file chunk by line range |
+| Tool         | Description                                             |
+| ------------ | ------------------------------------------------------- |
+| `read_file`  | Read a file chunk by line range                         |
 | `write_file` | Write content to a file (creates directories if needed) |
-| `edit_file` | Replace specific text in an existing file |
-| `bash` | Run a shell command with timeout |
-| `glob` | Find files matching a pattern |
-| `grep` | Search file contents and indexed symbols |
-| `web_search` | Search the internet via DuckDuckGo |
-| `web_fetch` | Fetch and extract text from a URL |
-| `think` | Internal reasoning (invisible to the user) |
+| `edit_file`  | Replace specific text in an existing file               |
+| `bash`       | Run a shell command with timeout                        |
+| `glob`       | Find files matching a pattern                           |
+| `grep`       | Search file contents and indexed symbols                |
+| `web_search` | Search the internet via DuckDuckGo                      |
+| `web_fetch`  | Fetch and extract text from a URL                       |
+| `think`      | Internal reasoning (invisible to the user)              |
 
 ## Project Structure
 
@@ -212,7 +212,3 @@ pip install build twine
 python -m build
 python -m twine upload dist/*
 ```
-
-## License
-
-MIT
