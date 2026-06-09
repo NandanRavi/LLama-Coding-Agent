@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "llamacode"
-version = "1.1.0"
+version = "1.2.0"
 description = "Multi-model coding agent powered by NVIDIA Llama (3B, 70B) with CLI, web search, and tool-use loop"
 readme = "README.md"
 license = "MIT"

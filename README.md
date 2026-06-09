@@ -206,8 +206,8 @@ llamacode
 Push a version tag to trigger the automated workflow:
 
 ```bash
-git tag v1.1.0
-git push origin v1.1.0
+git tag v1.2.0
+git push origin v1.2.0
 ```
 
 The GitHub Actions workflow (`.github/workflows/publish.yml`) builds, checks, and publishes to PyPI using trusted publishing (OIDC).
