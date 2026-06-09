@@ -10,7 +10,7 @@ from dotenv import load_dotenv
 KEY_PATTERN = re.compile(r"nvapi-[A-Za-z0-9_-]+")
 
 MODEL_URLS = {
-    "3B": "https://build.nvidia.com/meta/llama-3_2-3b-instruct",
+    "3B": "https://build.nvidia.com/meta/llama-3.2-3b-instruct",
     "70B": "https://build.nvidia.com/meta/llama-3_3-70b-instruct",
 }
 

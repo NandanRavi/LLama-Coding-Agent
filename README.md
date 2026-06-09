@@ -26,6 +26,11 @@ You need an NVIDIA API key to use Llama models. The easiest way to get one:
 llamacode --generate-key
 ```
 
+If `llamacode` is not on your PATH (common on Windows with user installs), use:
+```bash
+python -m coding_agent --generate-key
+```
+
 This opens [build.nvidia.com](https://build.nvidia.com) in a browser. Select the model (3B or 70B), log in to your NVIDIA account, and the key is saved automatically.
 
 Then just run:
@@ -94,9 +99,11 @@ llamacode checks these env var names (in order):
 
 ```bash
 llamacode                            # interactive CLI with model picker
+python -m coding_agent               # same as above (fallback if not on PATH)
 llamacode --model llama-3.2-3b       # skip picker, use 3B
 llamacode --model llama-3.3-70b      # skip picker, use 70B
 llamacode --generate-key             # generate API key via browser
+python -m coding_agent --generate-key  # same, fallback
 ```
 
 ### CLI Commands
