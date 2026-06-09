@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "llamacode"
-version = "1.2.0"
+version = "1.2.1"
 description = "Multi-model coding agent powered by NVIDIA Llama (3B, 70B) with CLI, web search, and tool-use loop"
 readme = "README.md"
 license = "MIT"
@@ -27,5 +27,5 @@ llamacode = "coding_agent:main"
 
 [tool.setuptools]
 py-modules = ["coding_agent", "key_generator", "api_server"]
-packages = ["agents", "core"]
+packages = ["agents", "core", "llamacode"]
 include-package-data = false
